@@ -1,5 +1,5 @@
 /*
- * Copyright © 2007-2010 Gerd Kohlberger <gerdko gmail com>
+ * Copyright 2013, Gerd Kohlberger <gerdko gmail com>
  *
  * This file is part of Mousetweaks.
  *
@@ -17,23 +17,23 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <glib.h>
+#include "mt_timer.h"
 
-#include "mt-timer.h"
-
-#define DEFAULT_TARGET_TIME 1.2f
-
-struct _MtTimerPrivate
+typedef struct
 {
-    GTimer *timer;
-    guint   tid;
-    gdouble elapsed;
+    guint   id;
+    gint64  stamp;
     gdouble target;
+} MtTimerPrivate;
+
+struct _MtTimer
+{
+    GObject         parent;
+    MtTimerPrivate *priv;
 };
 
 enum
 {
-    TICK,
     FINISHED,
     LAST_SIGNAL
 };
@@ -41,21 +41,17 @@ enum
 enum
 {
     PROP_0,
-    PROP_TARGET_TIME
+    PROP_TARGET
 };
 
 static guint signals[LAST_SIGNAL] = { 0, };
 
-G_DEFINE_TYPE (MtTimer, mt_timer, G_TYPE_OBJECT)
+G_DEFINE_TYPE_WITH_PRIVATE (MtTimer, mt_timer, G_TYPE_OBJECT)
 
 static void
 mt_timer_init (MtTimer *timer)
 {
-    timer->priv = G_TYPE_INSTANCE_GET_PRIVATE (timer,
-                                               MT_TYPE_TIMER,
-                                               MtTimerPrivate);
-    timer->priv->timer  = g_timer_new ();
-    timer->priv->target = DEFAULT_TARGET_TIME;
+    timer->priv = mt_timer_get_instance_private (timer);
 }
 
 static void
@@ -68,7 +64,7 @@ mt_timer_get_property (GObject    *object,
 
     switch (prop_id)
     {
-        case PROP_TARGET_TIME:
+        case PROP_TARGET:
             g_value_set_double (value, timer->priv->target);
             break;
         default:
@@ -86,8 +82,9 @@ mt_timer_set_property (GObject      *object,
 
     switch (prop_id)
     {
-        case PROP_TARGET_TIME:
+        case PROP_TARGET:
             timer->priv->target = g_value_get_double (value);
+            g_object_notify (object, pspec->name);
             break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -97,12 +94,7 @@ mt_timer_set_property (GObject      *object,
 static void
 mt_timer_finalize (GObject *object)
 {
-    MtTimer *timer = MT_TIMER (object);
-
-    if (timer->priv->tid)
-        g_source_remove (timer->priv->tid);
-
-    g_timer_destroy (timer->priv->timer);
+    mt_timer_stop (MT_TIMER (object));
 
     G_OBJECT_CLASS (mt_timer_parent_class)->finalize (object);
 }
@@ -110,56 +102,42 @@ mt_timer_finalize (GObject *object)
 static void
 mt_timer_class_init (MtTimerClass *klass)
 {
-    GObjectClass *object_class = G_OBJECT_CLASS (klass);
+    GObjectClass *object_class;
 
+    object_class = G_OBJECT_CLASS (klass);
     object_class->get_property = mt_timer_get_property;
     object_class->set_property = mt_timer_set_property;
     object_class->finalize = mt_timer_finalize;
 
-    signals[TICK] =
-        g_signal_new (g_intern_static_string ("tick"),
-                      G_OBJECT_CLASS_TYPE (klass),
-                      G_SIGNAL_RUN_LAST,
-                      0, NULL, NULL,
-                      g_cclosure_marshal_VOID__DOUBLE,
-                      G_TYPE_NONE, 1, G_TYPE_DOUBLE);
-
     signals[FINISHED] =
-        g_signal_new (g_intern_static_string ("finished"),
+        g_signal_new ("finished",
                       G_OBJECT_CLASS_TYPE (klass),
                       G_SIGNAL_RUN_LAST,
                       0, NULL, NULL,
                       g_cclosure_marshal_VOID__VOID,
                       G_TYPE_NONE, 0);
 
-    g_object_class_install_property (object_class, PROP_TARGET_TIME,
-            g_param_spec_double ("target-time", "Target time",
+    g_object_class_install_property (object_class, PROP_TARGET,
+            g_param_spec_double ("target", "Target time",
                                  "Target time of the timer",
-                                 0.1, 3.0, DEFAULT_TARGET_TIME,
+                                 0.1, 3.0, 0.1,
                                  G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
-
-    g_type_class_add_private (klass, sizeof (MtTimerPrivate));
 }
 
 static gboolean
-mt_timer_check_time (gpointer data)
+mt_timer_check (MtTimer *timer)
 {
-    MtTimer *timer = data;
-    MtTimerPrivate *priv = timer->priv;
+    gdouble elapsed;
 
-    priv->elapsed = g_timer_elapsed (priv->timer, NULL);
-    g_signal_emit (timer, signals[TICK], 0, priv->elapsed);
+    elapsed = (gdouble) (g_get_monotonic_time () - timer->priv->stamp) / 1e6;
 
-    if (priv->elapsed >= priv->target)
+    if (elapsed > timer->priv->target)
     {
-        priv->tid = 0;
-        priv->elapsed = 0.0;
+        timer->priv->id = 0;
         g_signal_emit (timer, signals[FINISHED], 0);
-
-        return FALSE;
+        return G_SOURCE_REMOVE;
     }
-
-    return TRUE;
+    return G_SOURCE_CONTINUE;
 }
 
 MtTimer *
@@ -173,10 +151,10 @@ mt_timer_start (MtTimer *timer)
 {
     g_return_if_fail (MT_IS_TIMER (timer));
 
-    g_timer_start (timer->priv->timer);
+    if (timer->priv->id == 0)
+        timer->priv->id = g_timeout_add (100, (GSourceFunc) mt_timer_check, timer);
 
-    if (timer->priv->tid == 0)
-        timer->priv->tid = g_timeout_add (100, mt_timer_check_time, timer);
+    timer->priv->stamp = g_get_monotonic_time ();
 }
 
 void
@@ -184,10 +162,10 @@ mt_timer_stop (MtTimer *timer)
 {
     g_return_if_fail (MT_IS_TIMER (timer));
 
-    if (timer->priv->tid)
+    if (timer->priv->id)
     {
-        g_source_remove (timer->priv->tid);
-        timer->priv->tid = 0;
+        g_source_remove (timer->priv->id);
+        timer->priv->id = 0;
     }
 }
 
@@ -196,31 +174,5 @@ mt_timer_is_running (MtTimer *timer)
 {
     g_return_val_if_fail (MT_IS_TIMER (timer), FALSE);
 
-    return timer->priv->tid != 0;
-}
-
-gdouble
-mt_timer_elapsed (MtTimer *timer)
-{
-    g_return_val_if_fail (MT_IS_TIMER (timer), 0.0);
-
-    return timer->priv->elapsed;
-}
-
-gdouble
-mt_timer_get_target (MtTimer *timer)
-{
-    g_return_val_if_fail (MT_IS_TIMER (timer), 0.0);
-
-    return timer->priv->target;
-}
-
-void
-mt_timer_set_target (MtTimer *timer, gdouble target)
-{
-    g_return_if_fail (MT_IS_TIMER (timer));
-    g_return_if_fail (target >= 0.1);
-
-    timer->priv->target = target;
-    g_object_notify (G_OBJECT (timer), "target-time");
+    return timer->priv->id != 0;
 }

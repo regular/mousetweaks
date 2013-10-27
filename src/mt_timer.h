@@ -1,5 +1,5 @@
 /*
- * Copyright © 2007-2010 Gerd Kohlberger <gerdko gmail com>
+ * Copyright 2013, Gerd Kohlberger <gerdko gmail com>
  *
  * This file is part of Mousetweaks.
  *
@@ -17,21 +17,26 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __MT_CTW_H__
-#define __MT_CTW_H__
+#ifndef __MT_TIMER_H__
+#define __MT_TIMER_H__
 
-#include <gtk/gtk.h>
+#include <glib-object.h>
 
 G_BEGIN_DECLS
 
-gboolean        mt_ctw_init               (void);
+#define MT_TYPE_TIMER  (mt_timer_get_type ())
+#define MT_TIMER(o)    (G_TYPE_CHECK_INSTANCE_CAST ((o), MT_TYPE_TIMER, MtTimer))
+#define MT_IS_TIMER(o) (G_TYPE_CHECK_INSTANCE_TYPE ((o), MT_TYPE_TIMER))
 
-void            mt_ctw_fini               (void);
+typedef GObjectClass    MtTimerClass;
+typedef struct _MtTimer MtTimer;
 
-GtkWidget *     mt_ctw_get_window         (void);
-
-void            mt_ctw_save_geometry      (void);
+GType       mt_timer_get_type       (void) G_GNUC_CONST;
+MtTimer *   mt_timer_new            (void);
+void        mt_timer_start          (MtTimer *timer);
+void        mt_timer_stop           (MtTimer *timer);
+gboolean    mt_timer_is_running     (MtTimer *timer);
 
 G_END_DECLS
 
-#endif /* __MT_CTW_H__ */
+#endif /* __MT_TIMER_H__ */

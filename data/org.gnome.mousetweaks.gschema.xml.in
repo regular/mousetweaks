@@ -1,19 +1,18 @@
 <schemalist>
-  <schema id="org.gnome.mousetweaks" path="/org/gnome/desktop/a11y/mouse/" gettext-domain="mousetweaks">
-    <key name="click-type-window-style" enum="org.gnome.mousetweaks.MtClickTypeWindowStyle">
-      <default>'both'</default>
-      <_summary>Click-type window style</_summary>
-      <_description>Button style of the click-type window.</_description>
-    </key>
-    <key name="click-type-window-orientation" enum="org.gnome.mousetweaks.MtClickTypeWindowOrientation">
+  <enum id="org.gnome.Mousetweaks.Orientation">
+    <value nick="vertical" value="0"/>
+    <value nick="horizontal" value="1"/>
+  </enum>
+  <schema id="org.gnome.Mousetweaks" path="/org/gnome/Mousetweaks/" gettext-domain="mousetweaks">
+    <key name="window-orientation" enum="org.gnome.Mousetweaks.Orientation">
       <default>'vertical'</default>
-      <_summary>Click-type window orientation</_summary>
-      <_description>Orientation of the click-type window.</_description>
+      <_summary>Hover Click window orientation</_summary>
+      <_description>Orientation of the Hover Click window.</_description>
     </key>
-    <key name="click-type-window-geometry" type="s">
+    <key name="window-geometry" type="s">
       <default>''</default>
-      <_summary>Click-type window geometry</_summary>
-      <_description>Size and position of the click-type window. The format is a standard X Window System geometry string.</_description>
+      <_summary>Hover Click window geometry</_summary>
+      <_description>Size and position of the Hover Click window.</_description>
     </key>
   </schema>
 </schemalist>

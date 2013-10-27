@@ -1,0 +1,51 @@
+.TH "mousetweaks" 1
+.SH NAME
+mousetweaks \- Accessibility enhancements for pointing devices
+.SH SYNOPSIS
+.B mousetweaks
+[\-\-hover\-click] [\-\-hover\-click\-time=FLOAT] [\-\-hover\-click\-time=FLOAT] [\-\-hover\-click\-threshold=INT]
+[\-\-secondary\-click] [\-\-secondary\-click\-time=FLOAT] [\-\-secondary\-click\-time=FLOAT] [\-\-secondary\-click\-threshold=INT]
+[\-v|\-\-version] [\-s|\-\-shutdown] [\-?|\-h|\-\-help]
+.SH DESCRIPTION
+.B mousetweaks
+is a collection of accessibility enhancements for pointing devices. This
+manual page describes the mousetweaks daemon.
+
+.SH OPTIONS
+.TP
+.B \-\-hover\-click
+Automatically perform mouse clicks without using a physical button.
+.TP
+.B \-\-hover\-click\-time=FLOAT
+Time to keep the pointer motionless before a Hover Click is performed.
+Range: 0.2\-3.0 seconds.
+.TP
+.B \-\-hover\-click\-threshold=INT
+Ignore small pointer movements. Range: 0\-30 pixels.
+.TP
+.B \-\-secondary\-click
+Trigger the secondary mouse button when the primary mouse button is held down
+for a specified amount of time.
+.TP
+.B \-\-secondary\-click\-time=FLOAT
+Time to hold the primary mouse button before a simulated secondary
+click is performed. Range: 0.5\-3.0 seconds.
+.TP
+.B \-\-secondary\-click\-threshold=INT
+Ignore small pointer movements. Range: 0\-30 pixels.
+.TP
+.B \-v, \-\-version
+Print the mousetweaks version to stdout.
+.TP
+.B \-s, \-\-shutdown
+Stop the mousetweaks daemon.
+
+.SH BUGS
+Report bugs to
+.UR http://bugzilla.gnome.org/
+<http://bugzilla.gnome.org/>
+.UE
+.SH AUTHORS
+This manual page was written by Francesco Fumanti.
+.SH LICENSE
+Licenced under the GNU General Public License v3 or later.

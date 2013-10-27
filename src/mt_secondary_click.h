@@ -1,5 +1,5 @@
 /*
- * Copyright © 2007-2010 Gerd Kohlberger <gerdko gmail com>
+ * Copyright 2013, Gerd Kohlberger <gerdko gmail com>
  *
  * This file is part of Mousetweaks.
  *
@@ -17,16 +17,23 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __MT_PIDFILE_H__
-#define __MT_PIDFILE_H__
+#ifndef __MT_SECONDARY_CLICK_H__
+#define __MT_SECONDARY_CLICK_H__
+
+#include "mt_click.h"
 
 G_BEGIN_DECLS
 
-int       mt_pidfile_create       (void);
-pid_t     mt_pidfile_is_running   (void);
-int       mt_pidfile_kill_wait    (int signal, int sec);
-int       mt_pidfile_remove       (void);
+#define MT_TYPE_SECONDARY_CLICK  (mt_secondary_click_get_type ())
+#define MT_SECONDARY_CLICK(o)    (G_TYPE_CHECK_INSTANCE_CAST ((o), MT_TYPE_SECONDARY_CLICK, MtSecondaryClick))
+#define MT_IS_SECONDARY_CLICK(o) (G_TYPE_CHECK_INSTANCE_TYPE ((o), MT_TYPE_SECONDARY_CLICK))
+
+typedef MtClickClass             MtSecondaryClickClass;
+typedef struct _MtSecondaryClick MtSecondaryClick;
+
+GType               mt_secondary_click_get_type     (void) G_GNUC_CONST;
+MtSecondaryClick *  mt_secondary_click_new          (void);
 
 G_END_DECLS
 
-#endif /* __MT_PIDFILE_H__ */
+#endif /* __MT_SECONDARY_CLICK_H__ */

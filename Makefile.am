@@ -1,4 +1,4 @@
-SUBDIRS = src data pixmaps po man
+SUBDIRS = src data po
 
 ACLOCAL_AMFLAGS = -I m4 ${ACLOCAL_FLAGS}
 
@@ -6,8 +6,7 @@ DISTCHECK_CONFIGURE_FLAGS =         \
     --disable-schemas-compile
 
 EXTRA_DIST =                        \
-    $(srcdir)/m4                    \
-    $(srcdir)/MAINTAINERS
+    $(srcdir)/m4
 
 MAINTAINERCLEANFILES =              \
     $(srcdir)/INSTALL               \
