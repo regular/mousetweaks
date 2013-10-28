@@ -18,6 +18,7 @@
  */
 
 #include <glib/gi18n.h>
+#include <glib-unix.h>
 #include <gtk/gtk.h>
 
 #include "config.h"
@@ -191,7 +192,7 @@ mousetweaks_proxy_ready (GDBusConnection  *connection,
     {
         g_warning ("%s", error->message);
         g_error_free (error);
-        g_object_set (win, "application", NULL, NULL);
+        gtk_widget_destroy (GTK_WIDGET (win));
         return;
     }
 
@@ -222,14 +223,8 @@ orientation_notify (GObject          *object,
                     GParamSpec       *pspec,
                     HoverClickWindow *win)
 {
-    HoverClickWindowPrivate *priv = win->priv;
-    GtkOrientation o;
-
-    o = gtk_orientable_get_orientation (GTK_ORIENTABLE (priv->box));
-    if (o == GTK_ORIENTATION_VERTICAL)
-        gtk_widget_set_size_request (GTK_WIDGET (priv->button_primary), 110, 50);
-    else
-        gtk_widget_set_size_request (GTK_WIDGET (priv->button_primary), 80, 50);
+    /* reset to minimum size */
+    gtk_window_resize (GTK_WINDOW (win), 1, 1);
 }
 
 static gboolean
@@ -284,6 +279,30 @@ set_menu_header (HoverClickWindow *win)
 }
 
 static void
+apply_window_geometry (HoverClickWindow *win)
+{
+    gchar *geo;
+
+    geo = g_settings_get_string (win->priv->settings, "window-geometry");
+    gtk_window_parse_geometry (GTK_WINDOW (win), geo);
+    g_free (geo);
+}
+
+static void
+save_window_geometry (HoverClickWindow *win)
+{
+    gint x, y, w, h;
+    gchar *geo;
+
+    gtk_window_get_size (GTK_WINDOW (win), &w, &h);
+    gtk_window_get_position (GTK_WINDOW (win), &x, &y);
+
+    geo = g_strdup_printf ("%ix%i+%i+%i", w, h, x, y);
+    g_settings_set_string (win->priv->settings, "window-geometry", geo);
+    g_free (geo);
+}
+
+static void
 hover_click_window_init (HoverClickWindow *win)
 {
     HoverClickWindowPrivate *priv;
@@ -298,15 +317,15 @@ hover_click_window_init (HoverClickWindow *win)
     g_object_set (gtk_settings_get_default (),
                   "gtk-application-prefer-dark-theme", TRUE, NULL);
 
-    g_signal_connect (priv->box, "notify::orientation",
-                      G_CALLBACK (orientation_notify), win);
-
     g_settings_bind_with_mapping (priv->settings, "window-orientation",
                                   priv->box, "orientation",
                                   G_SETTINGS_BIND_DEFAULT,
                                   orientation_get_mapping,
                                   orientation_set_mapping,
                                   NULL, NULL);
+
+    g_signal_connect (priv->box, "notify::orientation",
+                      G_CALLBACK (orientation_notify), win);
 
     g_signal_connect (priv->button_primary, "toggled", G_CALLBACK (button_primary_toggled), win);
     g_signal_connect (priv->button_double, "toggled", G_CALLBACK (button_double_toggled), win);
@@ -330,7 +349,6 @@ hover_click_window_init (HoverClickWindow *win)
 
     gtk_window_stick (GTK_WINDOW (win));
     gtk_window_set_keep_above (GTK_WINDOW (win), TRUE);
-    gtk_window_move (GTK_WINDOW (win), 30, 30);
 }
 
 static void
@@ -353,6 +371,13 @@ hover_click_window_class_init (HoverClickWindowClass *klass)
 }
 
 static void
+sighup_received (HoverClickWindow *win)
+{
+    save_window_geometry (win);
+    gtk_widget_destroy (GTK_WIDGET (win));
+}
+
+static void
 application_activate (GApplication *app,
                       gpointer      data)
 {
@@ -368,6 +393,10 @@ application_activate (GApplication *app,
     win = g_object_new (HOVER_CLICK_TYPE_WINDOW, NULL);
     gtk_application_add_window (GTK_APPLICATION (app), GTK_WINDOW (win));
     gtk_widget_show (win);
+
+    apply_window_geometry (HOVER_CLICK_WINDOW (win));
+
+    g_unix_signal_add (SIGHUP, (GSourceFunc) sighup_received, win);
 
     g_dbus_proxy_new (g_application_get_dbus_connection (app),
                       G_DBUS_PROXY_FLAGS_NONE,
