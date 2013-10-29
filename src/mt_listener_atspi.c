@@ -18,7 +18,9 @@
  */
 
 #include <string.h>
-#include <atspi/atspi.h>
+#include <atspi/atspi-event-listener.h>
+#include <atspi/atspi-registry.h>
+#include <atspi/atspi-misc.h>
 
 #include "mt_listener_atspi.h"
 
@@ -39,8 +41,8 @@ struct _MtListenerAtspi
 G_DEFINE_TYPE_WITH_PRIVATE (MtListenerAtspi, mt_listener_atspi, MT_TYPE_LISTENER)
 
 static void
-atspi_motion_event (const AtspiEvent *event,
-                    MtListenerAtspi  *listener)
+handle_motion_event (AtspiEvent      *event,
+                     MtListenerAtspi *listener)
 {
     listener->priv->x = event->detail1;
     listener->priv->y = event->detail2;
@@ -51,8 +53,8 @@ atspi_motion_event (const AtspiEvent *event,
 }
 
 static void
-atspi_button_event (const AtspiEvent *event,
-                    MtListenerAtspi  *listener)
+handle_button_event (AtspiEvent      *event,
+                     MtListenerAtspi *listener)
 {
     if (strlen (event->type) != 15)
         return;
@@ -71,30 +73,32 @@ atspi_button_event (const AtspiEvent *event,
 static void
 mt_listener_atspi_init (MtListenerAtspi *listener)
 {
-    GError *error = NULL;
-
     listener->priv = mt_listener_atspi_get_instance_private (listener);
 
-    atspi_init ();
+    if (atspi_init () != 0)
+    {
+        g_warning ("Failed to initialize AT-SPI2.");
+        return;
+    }
 
     listener->priv->motion = atspi_event_listener_new
-        ((AtspiEventListenerCB) atspi_motion_event, listener, NULL);
+        ((AtspiEventListenerCB) handle_motion_event, listener, NULL);
 
-    atspi_event_listener_register (listener->priv->motion, "mouse:abs", &error);
-    if (error)
+    if (!atspi_event_listener_register (listener->priv->motion,
+                                        "mouse:abs", NULL))
     {
-        g_warning ("%s", error->message);
-        g_clear_error (&error);
+        g_warning ("Failed to register mouse:abs events.");
+        return;
     }
 
     listener->priv->button = atspi_event_listener_new
-        ((AtspiEventListenerCB) atspi_button_event, listener, NULL);
+        ((AtspiEventListenerCB) handle_button_event, listener, NULL);
 
-    atspi_event_listener_register (listener->priv->button, "mouse:button", &error);
-    if (error)
+    if (!atspi_event_listener_register (listener->priv->button,
+                                        "mouse:button", NULL))
     {
-        g_warning ("%s", error->message);
-        g_error_free (error);
+        g_warning ("Failed to register mouse:button events.");
+        return;
     }
 }
 
@@ -149,15 +153,21 @@ mt_listener_atspi_send_event (MtListener *listener,
                               MtSendType  type)
 {
     MtListenerAtspiPrivate *priv = MT_LISTENER_ATSPI (listener)->priv;
-    GError *error = NULL;
-    gchar name[4] = { 'b', '1', 'c', '\0' };
+    gchar name[4];
 
     g_return_if_fail (button >= 1 && button <= 3);
+
+    name[0] = 'b';
+    name[1] = (gchar) button + 0x30;
+    name[3] = '\0';
 
     switch (type)
     {
         case MT_SEND_CLICK:
             name[2] = 'c';
+            break;
+        case MT_SEND_DOUBLE_CLICK:
+            name[2] = 'd';
             break;
         case MT_SEND_BUTTON_PRESS:
             name[2] = 'p';
@@ -169,16 +179,7 @@ mt_listener_atspi_send_event (MtListener *listener,
             g_warning ("Unknown SendType.");
             return;
     }
-
-    name[1] = (gchar) button + 0x30;
-
-    atspi_generate_mouse_event (priv->x, priv->y, name, &error);
-
-    if (error)
-    {
-        g_warning ("%s", error->message);
-        g_error_free (error);
-    }
+    atspi_generate_mouse_event (priv->x, priv->y, name, NULL);
 }
 
 static void

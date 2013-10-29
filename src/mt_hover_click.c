@@ -86,8 +86,7 @@ mt_hover_click_timer_finished (MtClick    *click,
             break;
 
         case MT_CLICK_TYPE_DOUBLE:
-            mt_listener_send_event (listener, 1, MT_SEND_CLICK);
-            mt_listener_send_event (listener, 1, MT_SEND_CLICK);
+            mt_listener_send_event (listener, 1, MT_SEND_DOUBLE_CLICK);
             g_object_set (click, "click-type", MT_CLICK_TYPE_PRIMARY, NULL);
             break;
 

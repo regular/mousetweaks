@@ -37,6 +37,7 @@ typedef GObject MtListener;
 typedef enum
 {
     MT_SEND_CLICK,
+    MT_SEND_DOUBLE_CLICK,
     MT_SEND_BUTTON_PRESS,
     MT_SEND_BUTTON_RELEASE
 } MtSendType;
