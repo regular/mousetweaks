@@ -29,6 +29,8 @@
 #include <gtk/gtk.h>
 #include <gdk/gdkx.h>
 #include <X11/extensions/XTest.h>
+#include <X11/Xlib.h>
+/*#include <X11/Intrinsic.h>*/
 
 #include "mt-common.h"
 #include "mt-settings.h"
@@ -46,7 +48,8 @@ enum
     PRESS = 0,
     RELEASE,
     CLICK,
-    DOUBLE_CLICK
+    DOUBLE_CLICK,
+    SHIFT_CLICK
 };
 
 typedef struct _MtCliArgs
@@ -100,6 +103,12 @@ mt_main_generate_button_event (MtData *mt,
 
     dpy = mt_common_get_xdisplay ();
     mt_common_xtrap_push ();
+
+    KeyCode keycode = XKeysymToKeycode(dpy, XK_Shift_L);
+
+
+    printf("type in mt_main_generate_button_event %d\n", type);
+
     switch (type)
     {
         case PRESS:
@@ -107,6 +116,19 @@ mt_main_generate_button_event (MtData *mt,
             break;
         case RELEASE:
             XTestFakeButtonEvent (dpy, button, False, delay);
+            break;
+        case SHIFT_CLICK:
+            XTestGrabControl (dpy, True);
+
+            XTestFakeKeyEvent (dpy, keycode, True, delay);
+
+            XTestFakeButtonEvent (dpy, button, True, delay);
+            XTestFakeButtonEvent (dpy, button, False, delay);
+
+            XTestFakeKeyEvent (dpy, keycode, False, delay);
+
+            XTestGrabControl (dpy, False);
+
             break;
         case CLICK:
             XTestFakeButtonEvent (dpy, button, True, CurrentTime);
@@ -154,6 +176,8 @@ mt_main_do_dwell_click (MtData *mt)
     ms = mt_settings_get_default ();
     click_type = mt_service_get_click_type (mt->service);
 
+    printf("click_type in mt_main_do_dwell_click: %d", click_type);
+
     if (ms->dwell_mode == G_DESKTOP_MOUSE_DWELL_MODE_GESTURE &&
         !mt->dwell_drag_started)
     {
@@ -164,6 +188,10 @@ mt_main_do_dwell_click (MtData *mt)
 
     switch (click_type)
     {
+        case MT_DWELL_CLICK_TYPE_SHIFTCLICK:
+            mt_main_generate_button_event (mt, 1, SHIFT_CLICK, 80);
+            break;
+
         case MT_DWELL_CLICK_TYPE_SINGLE:
             mt_main_generate_button_event (mt, 1, CLICK, 80);
             break;
@@ -242,6 +270,9 @@ mt_main_analyze_gesture (MtData *mt)
     GDesktopMouseDwellDirection direction;
     GdkDevice *cp;
     gint x, y;
+
+    if (mt_service_get_click_type (mt->service) == MT_DWELL_CLICK_TYPE_SHIFTCLICK)
+        return TRUE;
 
     if (mt_service_get_click_type (mt->service) == MT_DWELL_CLICK_TYPE_DRAG)
         return TRUE;

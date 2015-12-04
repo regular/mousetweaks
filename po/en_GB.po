@@ -37,7 +37,7 @@ msgstr "Drag"
 
 #: ../data/mousetweaks.ui.h:6
 msgid "Secondary Click"
-msgstr "Secondary Click"
+msgstr "Awesome Click"
 
 #: ../data/mousetweaks.ui.h:7
 msgid "Button Style"

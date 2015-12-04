@@ -63,8 +63,8 @@ static void
 ctw_style_changed (MtSettings *ms, GParamSpec *pspec)
 {
     GtkWidget *icon, *label;
-    const gchar *label_names[] = { "single_l", "double_l", "drag_l", "right_l" };
-    const gchar *icon_names[] = { "single_i", "double_i", "drag_i", "right_i" };
+    const gchar *label_names[] = { "single_l", "double_l", "drag_l", "right_l", "shiftclick_l" };
+    const gchar *icon_names[] = { "single_i", "double_i", "drag_i", "right_i", "shiftclick_i" };
     gint i;
 
     for (i = 0; i < 4; i++)
@@ -211,7 +211,7 @@ mt_ctw_init (void)
     GtkWidget *ctw;
     GObject *obj;
     GError *error = NULL;
-    const gchar *button_names[] = { "single", "double", "drag", "right" };
+    const gchar *button_names[] = { "single", "double", "drag", "right", "shiftclick" };
     gint i;
 
     /* load UI */
